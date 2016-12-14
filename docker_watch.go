@@ -18,13 +18,13 @@ import (
 )
 
 const (
-	defaultCollectors = "docker"
+	defaultCollectors = "stats,inspect,server"
 )
 
 var (
 	scrapeDurations = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
-			Namespace: collector.Namespace,
+			Namespace: "dw",
 			Subsystem: "exporter",
 			Name:      "scrape_duration_seconds",
 			Help:      "docker_watch: Duration of a scrape job.",
