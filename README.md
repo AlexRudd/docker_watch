@@ -10,7 +10,7 @@ This is all pretty hacky, so pull requests welcome.
 
 ```bash
 docker run \
-  --rm
+  --rm \
   -p 9100:9100 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   alexrudd/docker_watch
