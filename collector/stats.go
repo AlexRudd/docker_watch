@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // DockerStatsCollector orchestrates the collectors for Docker containers
@@ -51,6 +51,7 @@ func (c *DockerStatsCollector) Update(ch chan<- prometheus.Metric) (err error) {
 			// set container name
 			var labels = make(prometheus.Labels)
 			labels["name"] = strings.TrimPrefix(container.Names[0], "/")
+			labels["id"] = container.ID
 			for lk, lv := range container.Labels {
 				labels[lk] = lv
 			}

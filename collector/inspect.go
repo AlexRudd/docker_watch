@@ -10,7 +10,7 @@ import (
 	"github.com/docker/docker/api/types"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 )
 
 // DockerInspectCollector orchestrates the collectors for Docker containers
@@ -50,24 +50,9 @@ func (c *DockerInspectCollector) Update(ch chan<- prometheus.Metric) (err error)
 			// set container name
 			var labels = make(prometheus.Labels)
 			labels["name"] = strings.TrimPrefix(s.Name, "/")
+			labels["id"] = container.ID
 			for lk, lv := range container.Labels {
 				labels[lk] = lv
-			}
-			// created at
-			m := prometheus.NewCounter(prometheus.CounterOpts{
-				Namespace:   Namespace,
-				Subsystem:   "inspect",
-				Name:        string("created_timestamp"),
-				Help:        fmt.Sprintf("The time the container image was created as unix timestamp"),
-				ConstLabels: labels,
-			})
-			//set and collect
-			t, err := time.Parse(time.RFC3339Nano, s.Created)
-			if err == nil {
-				m.Set(float64(t.Unix()))
-				m.Collect(ch)
-			} else {
-				log.Warnf("Could not parse created at timestamp (%s): %s", s.Created, err.Error())
 			}
 
 			// General Info
@@ -77,8 +62,7 @@ func (c *DockerInspectCollector) Update(ch chan<- prometheus.Metric) (err error)
 			}
 			tLabels["image"] = s.Config.Image
 			tLabels["image_sha"] = s.Image
-			tLabels["id"] = s.ID
-			m = prometheus.NewCounter(prometheus.CounterOpts{
+			m := prometheus.NewCounter(prometheus.CounterOpts{
 				Namespace:   Namespace,
 				Subsystem:   "inspect",
 				Name:        string("info"),
@@ -87,39 +71,63 @@ func (c *DockerInspectCollector) Update(ch chan<- prometheus.Metric) (err error)
 			})
 			m.Set(float64(1))
 			m.Collect(ch)
-
-			// started at
-			m = prometheus.NewCounter(prometheus.CounterOpts{
-				Namespace:   Namespace,
-				Subsystem:   "inspect",
-				Name:        string("started_timestamp"),
-				Help:        fmt.Sprintf("The time the container was started as unix timestamp"),
-				ConstLabels: labels,
-			})
-			//set and collect
-			t, err = time.Parse(time.RFC3339Nano, s.State.StartedAt)
-			if err == nil {
+			
+			// created at
+			t, err := time.Parse(time.RFC3339Nano, s.Created)
+			if err != nil {
+				log.Warnf("Could not parse created at timestamp (%s): %s", s.Created, err.Error())
+			} else {
+				tLabels = make(prometheus.Labels)
+				for k, v := range labels {
+					tLabels[k] = v
+				}
+				tLabels["date_string"] = t.String()
+				m = prometheus.NewCounter(prometheus.CounterOpts{
+					Namespace:   Namespace,
+					Subsystem:   "inspect",
+					Name:        string("created_timestamp"),
+					Help:        fmt.Sprintf("The time the container image was created as unix timestamp"),
+					ConstLabels: tLabels,
+				})
+				//set and collect
 				m.Set(float64(t.Unix()))
 				m.Collect(ch)
-			} else {
+			}
+
+			// started at
+			t, err = time.Parse(time.RFC3339Nano, s.State.StartedAt)
+			if err != nil {
 				log.Warnf("Could not parse started at timestamp (%s): %s", s.Created, err.Error())
+			} else {
+				tLabels["date_string"] = t.String()
+				m = prometheus.NewCounter(prometheus.CounterOpts{
+					Namespace:   Namespace,
+					Subsystem:   "inspect",
+					Name:        string("started_timestamp"),
+					Help:        fmt.Sprintf("The time the container was started as unix timestamp"),
+					ConstLabels: tLabels,
+				})
+				tLabels["date_string"] = t.String()
+				m.Set(float64(t.Unix()))
+				m.Collect(ch)
 			}
 
 			// finished at
-			m = prometheus.NewCounter(prometheus.CounterOpts{
-				Namespace:   Namespace,
-				Subsystem:   "inspect",
-				Name:        string("finished_timestamp"),
-				Help:        fmt.Sprintf("The time the container was stopped as unix timestamp"),
-				ConstLabels: labels,
-			})
-			//set and collect
-			t, err = time.Parse(time.RFC3339Nano, s.State.FinishedAt)
-			if err == nil {
+			t, err = time.Parse(time.RFC3339Nano, s.State.StartedAt)
+			if err != nil {
+				log.Warnf("Could not parse finished at timestamp (%s): %s", s.Created, err.Error())
+			} else {
+				m = prometheus.NewCounter(prometheus.CounterOpts{
+					Namespace:   Namespace,
+					Subsystem:   "inspect",
+					Name:        string("finished_timestamp"),
+					Help:        fmt.Sprintf("The time the container was stopped as unix timestamp"),
+					ConstLabels: tLabels,
+				})
+				//set and collect
+				tLabels["date_string"] = t.String()
 				m.Set(float64(t.Unix()))
 				m.Collect(ch)
-			} else {
-				log.Warnf("Could not parse started at timestamp (%s): %s", s.Created, err.Error())
 			}
 
 			// state?
@@ -132,7 +140,7 @@ func (c *DockerInspectCollector) Update(ch chan<- prometheus.Metric) (err error)
 				Namespace:   Namespace,
 				Subsystem:   "inspect",
 				Name:        string("state"),
-				Help:        fmt.Sprintf("The time the container was stopped as unix timestamp"),
+				Help:        fmt.Sprintf("The current state of the container"),
 				ConstLabels: tLabels,
 			})
 			m.Set(float64(1))

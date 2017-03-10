@@ -7,7 +7,7 @@ import (
 	"github.com/docker/docker/client"
 	"golang.org/x/net/context"
 
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 )
 
 var (
