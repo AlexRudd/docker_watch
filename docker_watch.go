@@ -111,8 +111,13 @@ func main() {
 		metricsPath       = flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
 		enabledCollectors = flag.String("collectors.enabled", filterAvailableCollectors(defaultCollectors), "Comma-separated list of collectors to use.")
 		printCollectors   = flag.Bool("collectors.print", false, "If true, print available collectors and exit.")
+		debug             = flag.Bool("logging.debug", false, "If true, set log-level to debug.")
 	)
 	flag.Parse()
+
+	if *debug {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	if *showVersion {
 		fmt.Fprintln(os.Stdout, version.Print("docker_watch"))

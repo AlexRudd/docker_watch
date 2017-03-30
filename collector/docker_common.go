@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	dockerAddr = flag.String("collector.docker.addr", "unix:///var/run/docker.sock", "The location of the docker daemon socket or endpoint")
+	dockerAddr       = flag.String("collector.docker.addr", "unix:///var/run/docker.sock", "The location of the docker daemon socket or endpoint")
+	dockerAPIVersion = flag.String("collector.docker.api-version", "v1.22", "The api version for the docker client to use")
 )
 
 var dc *client.Client
@@ -19,7 +20,7 @@ var dc *client.Client
 func getDockerClient() (dockerClient *client.Client, err error) {
 	if dc == nil {
 		log.Debugf("Creating new Docker api client")
-		dockerClient, err = client.NewClient(*dockerAddr, "v1.22", nil, nil)
+		dockerClient, err = client.NewClient(*dockerAddr, *dockerAPIVersion, nil, nil)
 		dc = dockerClient
 	}
 	return dc, err

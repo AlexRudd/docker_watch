@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -51,8 +52,15 @@ func (c *DockerInspectCollector) Update(ch chan<- prometheus.Metric) (err error)
 			var labels = make(prometheus.Labels)
 			labels["name"] = strings.TrimPrefix(s.Name, "/")
 			labels["id"] = container.ID
+			log.Debugf("Building inspect metrics for container %s (%s)", strings.TrimPrefix(container.Names[0], "/"), container.ID)
+
+			reg, err := regexp.Compile("[^A-Za-z0-9]+")
+			if err != nil {
+				log.Fatalf("Failed to compile regex expression for making labals safe: %s", err.Error())
+			}
 			for lk, lv := range container.Labels {
-				labels[lk] = lv
+				safeKey := reg.ReplaceAllString(lk, "")
+				labels[safeKey] = lv
 			}
 
 			// General Info
@@ -71,7 +79,7 @@ func (c *DockerInspectCollector) Update(ch chan<- prometheus.Metric) (err error)
 			})
 			m.Set(float64(1))
 			m.Collect(ch)
-			
+
 			// created at
 			t, err := time.Parse(time.RFC3339Nano, s.Created)
 			if err != nil {
